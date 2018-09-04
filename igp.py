@@ -56,6 +56,9 @@ load(igp_dir + "computer_based_search_naive_dff.sage")
 load(igp_dir + "piecewise_functions.sage")
 load(igp_dir + "lifting_region.sage")
 
+# faster subaddtivity function
+load(igp_dir + "faster_subadditivity_test.sage")
+
 import extreme_functions, procedures
 
 try:
