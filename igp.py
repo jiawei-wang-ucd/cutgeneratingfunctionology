@@ -58,6 +58,7 @@ load(igp_dir + "lifting_region.sage")
 
 # faster subaddtivity function
 load(igp_dir + "faster_subadditivity_test.sage")
+load(igp_dir + "test_functions.sage")
 
 import extreme_functions, procedures
 
