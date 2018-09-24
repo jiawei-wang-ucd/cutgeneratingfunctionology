@@ -35,7 +35,7 @@ def function_random_perturbation(fn,epsilon=1/10,seed=1,N=10,stay_in_unit_interv
         values.append(value)
     return piecewise_function_from_breakpoints_and_values(bkpts, values)
     
-def histogram_delta_pi(fn,sampling='vertices',q=1,epsilon=1/10000):
+def histogram_delta_pi(fn,sampling='vertices',q=5,epsilon=1/10000):
     """
     The histogram of the values of delta pi over given points in the complex.
     """
