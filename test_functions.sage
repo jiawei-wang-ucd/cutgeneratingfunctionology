@@ -7,16 +7,22 @@ from igp import *
 
 import random
 import csv
+import time
 
 def write_performance_table(function_list):
     with open('performance.csv', mode='w') as file:
-        employee_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        employee_writer.writerow(['# breakpoints', '# vertices','# nodes','delta pi min','n/v ratio'])
+        performance_table = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        performance_table.writerow(['# breakpoints', '# vertices','# nodes','delta pi min','n/v ratio','is subadditive','time old (s)','time new (s)'])
         for fn in function_list:
             T=SubadditivityTestTree(fn)
+            start1=time.time()
             minimum=T.minimum()
+            time1=time.time()-start1
             v=number_of_vertices(fn)
-            employee_writer.writerow([len(fn.end_points()), v,T.number_of_nodes(),minimum,float(T.number_of_nodes()/v)])
+            start2=time.time()
+            is_subadditive=subadditivity_test(fn)
+            time2=time.time()-start2
+            performance_table.writerow([len(fn.end_points()), v,T.number_of_nodes(),minimum,float(T.number_of_nodes()/v),str(is_subadditive),time2,time1])
 
 def test_function_from_two_slope_fill_in_extreme_functions(fn,fill_in_epsilon=1/10,perturb_epsilon=1/10,seed=1,N=10,stay_in_unit_interval=False):
     """
