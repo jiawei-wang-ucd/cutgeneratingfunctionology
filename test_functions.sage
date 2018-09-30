@@ -8,6 +8,7 @@ from igp import *
 import random
 import csv
 import time
+from sage.misc.sage_timeit import sage_timeit
 
 def write_performance_table(function_list):
     with open('performance.csv', mode='w') as file:
