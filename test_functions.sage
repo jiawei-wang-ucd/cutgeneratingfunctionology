@@ -10,20 +10,55 @@ import csv
 import time
 from sage.misc.sage_timeit import sage_timeit
 
-def write_performance_table(function_list):
+default_function_name_list=['gj_forward_3_slope','drlm_backward_3_slope','chen_4_slope','kzh_7_slope_1','kzh_10_slope_1']
+default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
+default_perturbation_epsilon_list=[i/100 for i in range(3)]
+
+def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,perturbation_epsilon_list):
     with open('performance.csv', mode='w') as file:
         performance_table = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        performance_table.writerow(['# breakpoints', '# vertices','# nodes','delta pi min','n/v ratio','is subadditive','time old (s)','time new (s)'])
-        for fn in function_list:
-            T=SubadditivityTestTree(fn)
-            start1=time.time()
-            minimum=T.minimum()
-            time1=time.time()-start1
-            v=number_of_vertices(fn)
-            start2=time.time()
-            is_subadditive=subadditivity_test(fn)
-            time2=time.time()-start2
-            performance_table.writerow([len(fn.end_points()), v,T.number_of_nodes(),minimum,float(T.number_of_nodes()/v),str(is_subadditive),time2,time1])
+        performance_table.writerow(['base_function', 'two_slope_fill_in_epsilon', 'perturbation_epsilon', '# breakpoints','# slopes','# vertices','# additive vertices','add_v/v ratio','delta pi min','is subadditive','# .min nodes (constant)', '# .min nodes (affine)', '.min n/v ratio (constant)','.min n/v ratio (affine)', '# .is_subadditive nodes (constant)', '# .is_subadditive nodes (affine)', '.is_subadditive n/v ratio (constant)', '.is_subadditive n/v ratio (affine)', 'time .min (constant) (s)','time .min (affine) (s)', 'time .is_subadditive (constant) (s)','time .is_subadditive (affine) (s)', 'time subadditivity_test (s)'])
+        for name in function_name_list:
+            global base_fn
+            base_fn=eval(name)()
+            v=number_of_vertices(base_fn)
+            add_v=number_of_additive_vertices(base_fn)
+            m,n_m_c,t_m_c=measure_T_min(base_fn,bound="constant")
+            m,n_m_a,t_m_a=measure_T_min(base_fn,bound="affine")
+            is_sub,n_i_c,t_i_c=measure_T_is_subadditive(base_fn,bound="constant")
+            is_sub,n_i_a,t_i_a=measure_T_is_subadditive(base_fn,bound="affine")
+            performance_table.writerow([name,None,None,len(base_fn.end_points()),number_of_slopes(base_fn),v,add_v,float(add_v/v),m,is_sub,n_m_c,n_m_a,float(n_m_c/v),float(n_m_a/v),n_i_c,n_i_a,float(n_i_c/v),float(n_i_a/v),t_m_c,t_m_a,t_i_c,t_i_a,sage_timeit('subadditivity_test(base_fn)',globals(),seconds=True)])
+            for fill_in_epsilon in two_slope_fill_in_epsilon_list:
+                for perturb_epsilon in perturbation_epsilon_list:
+                    global fn
+                    fn=test_function_from_two_slope_fill_in_extreme_functions(base_fn,fill_in_epsilon,perturb_epsilon)
+                    add_v=number_of_additive_vertices(fn)
+                    v=number_of_vertices(fn)
+                    m,n_m_c,t_m_c=measure_T_min(fn,bound="constant")
+                    m,n_m_a,t_m_a=measure_T_min(fn,bound="affine")
+                    is_sub,n_i_c,t_i_c=measure_T_is_subadditive(fn,bound="constant")
+                    is_sub,n_i_a,t_i_a=measure_T_is_subadditive(fn,bound="affine")
+                    performance_table.writerow([name,float(fill_in_epsilon),float(perturb_epsilon),len(fn.end_points()),number_of_slopes(fn),v,add_v,float(add_v/v),m,is_sub,n_m_c,n_m_a,float(n_m_c/v),float(n_m_a/v),n_i_c,n_i_a,float(n_i_c/v),float(n_i_a/v),t_m_c,t_m_a,t_i_c,t_i_a,sage_timeit('subadditivity_test(fn)',globals(),seconds=True)])
+
+def measure_T_min(fn,bound="constant"):
+    global T
+    T=SubadditivityTestTree(fn)
+    if bound=="constant":
+        t=sage_timeit('T.minimum(max_number_of_bkpts=0)',globals(),seconds=True)
+        return T.min,T.number_of_nodes(),t
+    else:
+        t=sage_timeit('T.minimum(max_number_of_bkpts=100000)',globals(),seconds=True)
+        return T.min,T.number_of_nodes(),t
+
+def measure_T_is_subadditive(fn,bound="constant"):
+    global T
+    T=SubadditivityTestTree(fn)
+    if bound=="constant":
+        t=sage_timeit('T.is_subadditive(max_number_of_bkpts=0)',globals(),seconds=True)
+        return T._is_subadditive,T.number_of_nodes(),t
+    else:
+        t=sage_timeit('T.is_subadditive(max_number_of_bkpts=100000)',globals(),seconds=True)
+        return T._is_subadditive,T.number_of_nodes(),t
 
 def test_function_from_two_slope_fill_in_extreme_functions(fn,fill_in_epsilon=1/10,perturb_epsilon=1/10,seed=1,N=10,stay_in_unit_interval=False):
     """
