@@ -13,6 +13,7 @@ from sage.misc.sage_timeit import sage_timeit
 default_function_name_list=['gj_forward_3_slope','drlm_backward_3_slope','chen_4_slope','kzh_7_slope_1','kzh_10_slope_1']
 default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
 default_perturbation_epsilon_list=[i/100 for i in range(3)]
+default_max_number_of_bkpts=[0,10,20,40,100,400,1000,10000,100000]
 
 
 def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,perturbation_epsilon_list):
@@ -43,53 +44,31 @@ def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,pe
                     is_sub,n_i_a,t_i_a=measure_T_is_subadditive(fn,bound="affine",number=1,repeat=1)
                     performance_table.writerow([name,None,None,len(fn.end_points()),number_of_slopes(fn),v,add_v,float(add_v/v),m,is_sub,n_m_c,n_m_a,n_m_m, float(n_m_c/v),float(n_m_a/v),float(n_m_m/v),n_i_c,n_i_a,n_i_m,float(n_i_c/v),float(n_i_a/v),float(n_i_m/v),t_m_c,t_m_a,t_m_m,t_i_c,t_i_a,t_i_m,sage_timeit('subadditivity_test(fn,stop_if_fail=True)',globals(),number=1,repeat=1,seconds=True)])
 
-def measure_T_min(f,bound="constant",**kwds):
-    t2=sage_timeit('T=SubadditivityTestTree(fn)',globals(),seconds=True)
-    def time1(max_number_of_bkpts=0):
+def measure_T_min(fn,max_number_of_bkpts,**kwds):
+    global f
+    f=fn
+    t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
+    def time_min(max_number_of_bkpts=max_number_of_bkpts):
         global T
         T=SubadditivityTestTree(f)
         T.minimum(max_number_of_bkpts=max_number_of_bkpts)
-    if bound=="constant":
-        global proc
-        proc = time1
-        t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
-        return T.min,T.number_of_nodes(),t1-t2
-    elif bound=="affine":
-        t1=sage_timeit('T=SubadditivityTestTree(fn);T.minimum(max_number_of_bkpts=10000)',globals(),seconds=True,**kwds)
-        T=SubadditivityTestTree(fn)
-        m=T.minimum(max_number_of_bkpts=10000)
-        return T.min,T.number_of_nodes(),t1-t2
-    elif bound=="mixed":
-        t1=sage_timeit('T=SubadditivityTestTree(fn);T.minimum(max_number_of_bkpts=10000)',globals(),seconds=True,**kwds)
-        T=SubadditivityTestTree(fn)
-        m=T.minimum(max_number_of_bkpts=100)
-        return T.min,T.number_of_nodes(),t1-t2
-    else:
-        raise ValueError, "Can't recognize bound type."
+    global proc
+    proc = time_min
+    t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
+    return T.min,T.number_of_nodes(),t1-t2
 
-def measure_T_is_subadditive(f,bound="constant",**kwds):
-    global fn
-    global T
-    fn=f
-    t2=sage_timeit('T=SubadditivityTestTree(fn)',globals(),seconds=True)
-    if bound=="constant":
-        t1=sage_timeit('T=SubadditivityTestTree(fn);T.is_subadditive(stop_if_fail=True,max_number_of_bkpts=0)',globals(),seconds=True,**kwds)
-        T=SubadditivityTestTree(fn)
-        i=T.is_subadditive(max_number_of_bkpts=0,stop_if_fail=True)
-        return T._is_subadditive,T.number_of_nodes(),t1-t2
-    elif bound=="affine":
-        t1=sage_timeit('T=SubadditivityTestTree(fn);T.is_subadditive(stop_if_fail=True,max_number_of_bkpts=100000)',globals(),seconds=True,**kwds)
-        T=SubadditivityTestTree(fn)
-        i=T.is_subadditive(max_number_of_bkpts=10000,stop_if_fail=True)
-        return T._is_subadditive,T.number_of_nodes(),t1-t2
-    elif bound=="mixed":
-        t1=sage_timeit('T=SubadditivityTestTree(fn);T.is_subadditive(stop_if_fail=True,max_number_of_bkpts=100000)',globals(),seconds=True,**kwds)
-        T=SubadditivityTestTree(fn)
-        i=T.is_subadditive(max_number_of_bkpts=100,stop_if_fail=True)
-        return T._is_subadditive,T.number_of_nodes(),t1-t2
-    else:
-        raise ValueError, "Can't recognize bound type."
-
+def measure_T_is_subadditive(fn,max_number_of_bkpts,**kwds):
+    global f
+    f=fn
+    t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
+    def time_limit(max_number_of_bkpts=max_number_of_bkpts):
+        global T
+        T=SubadditivityTestTree(f)
+        T.is_subadditive(stop_if_fail=True, max_number_of_bkpts=max_number_of_bkpts)
+    global proc
+    proc = time_limit
+    t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
+    return T.number_of_nodes(),t1-t2
 
 def test_function_from_two_slope_fill_in_extreme_functions(fn,fill_in_epsilon=1/10,perturb_epsilon=1/10,seed=1,N=10,stay_in_unit_interval=False):
     """
