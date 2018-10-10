@@ -9,6 +9,35 @@ from itertools import chain
 import itertools
 import numpy as np
 
+def verts_new(I1, J1, K1):
+    """
+    Computes the vertices based on `I1, J1` and `K1`.
+    """
+    temp =set()
+    for i in I1:
+        for j in J1:
+            if element_of_int(i+j,K1):
+                temp.add((i,j,i+j))
+    for i in I1:
+        for k in K1:
+            if element_of_int(k-i,J1):
+                temp.add((i,k-i,k))
+    for j in J1:
+        for k in K1:
+            if element_of_int(k-j,I1):
+                temp.add((k-j,j,k))
+    if len(temp) > 0:
+        return temp
+
+def projections_new(vertices):
+    """
+    Computes `F(I,J,K)`.
+    """
+    if vertices:
+        l=zip(*vertices)
+        return [[min(l[0]),max(l[0])],[min(l[1]),max(l[1])],[min(l[2]),max(l[2])]]
+
+
 class SubadditivityTestTreeNode :
 
     def __init__(self, fn, level, intervals):
@@ -16,8 +45,8 @@ class SubadditivityTestTreeNode :
         self.intervals=intervals
         self.level=level
         self.function=fn
-        self.vertices=verts(*intervals)
-        self.projections=projections(self.vertices)
+        self.vertices=verts_new(*intervals)
+        self.projections=projections_new(self.vertices)
         self.left_child=None
         self.right_child=None
         self.parent=None
