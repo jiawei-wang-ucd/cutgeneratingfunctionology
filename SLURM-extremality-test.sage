@@ -1,5 +1,5 @@
 #! /home/wangjw/sage/sage-8.3/sage
-#SBATCH --array=1-14 --time 10
+#SBATCH --array=0-9 --time=00:10:00
 #
 # --array: Specify the range of the array tasks.
 # --time: Acceptable time formats include "minutes", "minutes:seconds", "hours:minutes:seconds" etc.
@@ -16,10 +16,7 @@ sys.path = [''] + sys.path
 import igp
 from igp import *
 
-functions = [bcdsp_arbitrary_slope,
-bhk_gmi_irrational,
-bhk_irrational,
-bhk_slant_irrational,
+functions = [
 chen_4_slope,
 dg_2_step_mir,
 dg_2_step_mir_limit,
@@ -31,8 +28,12 @@ gj_2_slope_repeat,
 gj_forward_3_slope,
 gmic]
 
+
 factory = functions[task_id]
 print("Extremality test for {}".format(factory))
 h = factory()
-extremality_test(h)
+print(extremality_test(h))
+for epsilon in [1/10,1/100]:
+    new_h=two_slope_fill_in_extreme(h,epsilon)
+    print(extremality_test(new_h))
 
