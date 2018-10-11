@@ -160,6 +160,9 @@ def additive_vertices_ratio(fn):
     return number_of_additive_vertices(fn)/number_of_vertices(fn)
 
 def minimum_of_delta_pi(fn):
+    """
+    Return the min of delta_pi of fn. (Quatratic complexity)
+    """
     global_min=10000
     for x in fn.end_points():
         for y in fn.end_points():
@@ -169,18 +172,52 @@ def minimum_of_delta_pi(fn):
     for z in fn.end_points():
         for x in fn.end_points():
             y=z-x
-            delta_pi(fn,x,y)
+            delta=delta_pi(fn,x,y)
             if delta<global_min:
                 global_min=delta
     for z in fn.end_points():
         for x in fn.end_points():
             z=1+z
             y=z-x
-            delta_pi(fn,x,y)
+            delta=delta_pi(fn,x,y)
             if delta<global_min:
                 global_min=delta
     return global_min
 
+def is_goal_reached(fn,goal=0,stop_if_fail=True):
+    """
+    Return if delta_pi of fn can reach goal-epsilon.
+    """
+    exact_solutions=set()
+    superior_solutions=set()
+    for x in fn.end_points():
+        for y in fn.end_points():
+            delta=delta_pi(fn,x,y)
+            if delta<goal:
+                superior_solutions.add((x,y))
+                if stop_if_fail:
+                    return True,superior_solutions
+    for z in fn.end_points():
+        for x in fn.end_points():
+            y=z-x
+            delta=delta_pi(fn,x,y)
+            if delta<goal:
+                superior_solutions.add((x,y))
+                if stop_if_fail:
+                    return True,superior_solutions
+    for z in fn.end_points():
+        for x in fn.end_points():
+            z=1+z
+            y=z-x
+            delta=delta_pi(fn,x,y)
+            if delta<goal:
+                superior_solutions.add((x,y))
+                if stop_if_fail:
+                    return True,superior_solutions
+    if len(superior_solutions)>0:
+        return True,superior_solutions
+    else:
+        return False,superior_solutions
 
 
     
