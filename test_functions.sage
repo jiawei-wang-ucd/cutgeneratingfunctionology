@@ -10,6 +10,8 @@ import csv
 import time
 from sage.misc.sage_timeit import sage_timeit
 
+random.seed(500)
+
 default_function_name_list=['gj_forward_3_slope','drlm_backward_3_slope','chen_4_slope','kzh_7_slope_1','kzh_10_slope_1']
 default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
 default_perturbation_epsilon_list=[i/100 for i in range(3)]
@@ -77,11 +79,10 @@ def test_function_from_two_slope_fill_in_extreme_functions(fn,fill_in_epsilon=1/
     f1=two_slope_fill_in_extreme(fn,fill_in_epsilon)
     return function_random_perturbation(f1,epsilon=perturb_epsilon,seed=seed,N=N,stay_in_unit_interval=stay_in_unit_interval)
 
-def function_random_perturbation(fn,epsilon=1/10,seed=1,N=10,stay_in_unit_interval=False):
+def function_random_perturbation(fn,epsilon=1/100,number_of_bkpts=10,stay_in_unit_interval=False):
     """
     Return a random perturbation of the given function fn.
     """
-    random.seed(seed)
     bkpts=[]
     values=[]
     if epsilon==0:
@@ -184,15 +185,17 @@ def minimum_of_delta_pi(fn):
                 global_min=delta
     return global_min
 
-def is_goal_reached(fn,goal=0,stop_if_fail=True):
+def is_goal_reached(fn,goal=0,stop_if_fail=True,keep_exact_solutions=True):
     """
-    Return if delta_pi of fn can reach goal-epsilon.
+    Return if delta_pi of fn can reach goal-epsilon. (Quatratic complexity)
     """
     exact_solutions=set()
     superior_solutions=set()
     for x in fn.end_points():
         for y in fn.end_points():
             delta=delta_pi(fn,x,y)
+            if keep_exact_solutions and delta==goal:
+                exact_solutions.add((x,y))
             if delta<goal:
                 superior_solutions.add((x,y))
                 if stop_if_fail:
@@ -201,6 +204,8 @@ def is_goal_reached(fn,goal=0,stop_if_fail=True):
         for x in fn.end_points():
             y=z-x
             delta=delta_pi(fn,x,y)
+            if keep_exact_solutions and delta==goal:
+                exact_solutions.add((x,y))
             if delta<goal:
                 superior_solutions.add((x,y))
                 if stop_if_fail:
@@ -210,6 +215,8 @@ def is_goal_reached(fn,goal=0,stop_if_fail=True):
             z=1+z
             y=z-x
             delta=delta_pi(fn,x,y)
+            if keep_exact_solutions and delta==goal:
+                exact_solutions.add((x,y))
             if delta<goal:
                 superior_solutions.add((x,y))
                 if stop_if_fail:
