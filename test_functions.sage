@@ -46,58 +46,48 @@ def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,pe
                     is_sub,n_i_a,t_i_a=measure_T_is_subadditive(fn,bound="affine",number=1,repeat=1)
                     performance_table.writerow([name,None,None,len(fn.end_points()),number_of_slopes(fn),v,add_v,float(add_v/v),m,is_sub,n_m_c,n_m_a,n_m_m, float(n_m_c/v),float(n_m_a/v),float(n_m_m/v),n_i_c,n_i_a,n_i_m,float(n_i_c/v),float(n_i_a/v),float(n_i_m/v),t_m_c,t_m_a,t_m_m,t_i_c,t_i_a,t_i_m,sage_timeit('subadditivity_test(fn,stop_if_fail=True)',globals(),number=1,repeat=1,seconds=True)])
 
-def measure_T_min(fn,max_number_of_bkpts,**kwds):
+def measure_T_min(fn,max_number_of_bkpts,search_method,**kwds):
     global f
     f=fn
     t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
-    def time_min(max_number_of_bkpts=max_number_of_bkpts):
+    def time_min(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method):
         global T
         T=SubadditivityTestTree(f)
-        T.minimum(max_number_of_bkpts=max_number_of_bkpts)
+        T.minimum(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method)
     global proc
     proc = time_min
     t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
-    return T.min,T.number_of_nodes(),t1-t2
+    return [T.min,T.number_of_nodes(),t1-t2]
 
-def measure_T_is_subadditive(fn,max_number_of_bkpts,**kwds):
+def measure_T_is_subadditive(fn,max_number_of_bkpts,search_method,**kwds):
     global f
     f=fn
     t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
-    def time_limit(max_number_of_bkpts=max_number_of_bkpts):
+    def time_limit(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method):
         global T
         T=SubadditivityTestTree(f)
-        T.is_subadditive(stop_if_fail=True, max_number_of_bkpts=max_number_of_bkpts)
+        T.is_subadditive(stop_if_fail=True, max_number_of_bkpts=max_number_of_bkpts,search_method=search_method)
     global proc
     proc = time_limit
     t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
-    return T.number_of_nodes(),t1-t2
+    return [T.number_of_nodes(),t1-t2]
 
-def test_function_from_two_slope_fill_in_extreme_functions(fn,fill_in_epsilon=1/10,perturb_epsilon=1/10,seed=1,N=10,stay_in_unit_interval=False):
+def function_random_perturbation(fn,epsilon,number_of_bkpts_ratio=10):
     """
-    Return a perturbation function of the 2 slope approximation function of the given function fn.
+    Return a random perturbation of the given function fn. Randomly perturb function values at randomly chosen 1/10 breakpoints.
     """
-    f1=two_slope_fill_in_extreme(fn,fill_in_epsilon)
-    return function_random_perturbation(f1,epsilon=perturb_epsilon,seed=seed,N=N,stay_in_unit_interval=stay_in_unit_interval)
-
-def function_random_perturbation(fn,epsilon=1/100,number_of_bkpts=10,stay_in_unit_interval=False):
-    """
-    Return a random perturbation of the given function fn.
-    """
-    bkpts=[]
-    values=[]
+    values=fn.values_at_end_points()
+    n=len(fn.end_points())
     if epsilon==0:
         return fn
-    for bkpt in fn.end_points():
-        bkpts.append(bkpt)
-        pert=random.randint(-N,N)
-        value=fn(bkpt)+pert*epsilon/N
-        if stay_in_unit_interval:
-            if value>1:
-                value=1
-            if value<0:
-                value=0
-        values.append(value)
-    return piecewise_function_from_breakpoints_and_values(bkpts, values)
+    bkpts_number=n//number_of_bkpts_ratio
+    pert_bkpts=random.sample(range(1, n-1), bkpts_number)
+    for i in pert_bkpts:
+        if random.randint(0,1)==0:
+            values[i]+=epsilon
+        else:
+            values[i]-=epsilon
+    return piecewise_function_from_breakpoints_and_values(fn.end_points(), values)
     
 def histogram_delta_pi(fn,sampling='vertices',q=5,epsilon=1/10000):
     """
