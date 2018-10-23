@@ -6,7 +6,7 @@
 import os
 task_id = os.getenv("SLURM_ARRAY_TASK_ID")
 if task_id:
-task_id = int(task_id)
+    task_id = int(task_id)
 
 print("Sage hello from task {}".format(task_id))
 
