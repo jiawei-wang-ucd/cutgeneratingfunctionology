@@ -64,7 +64,7 @@ with open('cplex_performance_%s.csv' % task_id, mode='w') as file:
                 is_sub=False
             res_0_D=measure_T_min(fn,0,'DFS',solver='cplex',number=1,repeat=1)
             res_0_D.append(float(res_0_D[1]/v))
-            res_20_D=measure_T_min(fn,20,'DFS',solver='cplex'number=1,repeat=1)
+            res_20_D=measure_T_min(fn,20,'DFS',solver='cplex',number=1,repeat=1)
             res_20_D.append(float(res_20_D[1]/v))
             res_50_D=measure_T_min(fn,50,'DFS',solver='cplex',number=1,repeat=1)
             res_50_D.append(float(res_50_D[1]/v))
