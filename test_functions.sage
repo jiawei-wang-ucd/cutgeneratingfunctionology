@@ -50,10 +50,10 @@ def measure_T_min(fn,max_number_of_bkpts,search_method,**kwds):
     global f
     f=fn
     t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
-    def time_min(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method):
+    def time_min(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method,**kwds):
         global T
         T=SubadditivityTestTree(f)
-        T.minimum(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method)
+        T.minimum(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method,**kwds)
     global proc
     proc = time_min
     t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
@@ -63,10 +63,10 @@ def measure_T_is_subadditive(fn,max_number_of_bkpts,search_method,**kwds):
     global f
     f=fn
     t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
-    def time_limit(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method):
+    def time_limit(max_number_of_bkpts=max_number_of_bkpts,search_method=search_method,**kwds):
         global T
         T=SubadditivityTestTree(f)
-        T.is_subadditive(stop_if_fail=True, max_number_of_bkpts=max_number_of_bkpts,search_method=search_method)
+        T.is_subadditive(stop_if_fail=True, max_number_of_bkpts=max_number_of_bkpts,search_method=search_method,**kwds)
     global proc
     proc = time_limit
     t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
