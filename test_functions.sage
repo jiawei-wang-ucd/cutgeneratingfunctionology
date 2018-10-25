@@ -17,6 +17,46 @@ default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
 default_perturbation_epsilon_list=[i/100 for i in range(3)]
 default_max_number_of_bkpts=[0,10,20,40,100,400,1000,10000,100000]
 
+def generate_mip_of_delta_pi_min(fn,solver='Coin'):
+    bkpts=fn.end_points()
+    values=fn.values_at_end_points()
+    n=len(bkpts)
+    bkpts2=bkpts+[1+bkpts[i] for i in range(1,n)]
+    values2=values+[values[i] for i in range(1,n)]
+    p = MixedIntegerLinearProgram(maximization=False, solver=solver)
+    xyz = p.new_variable()
+    x,y,z = xyz['x'],xyz['y'],xyz['z']
+    vxyz = p.new_variable()
+    vx,vy,vz = vxyz['vx'],vxyz['vy'],vxyz['vz']
+    lambda_x = p.new_variable(nonnegative=True)
+    lambda_y = p.new_variable(nonnegative=True)
+    lambda_z = p.new_variable(nonnegative=True)
+    b_x=p.new_variable(binary=True)
+    b_y=p.new_variable(binary=True)
+    b_z=p.new_variable(binary=True)
+
+    p.set_objective(vx+vy-vz)
+
+    p.add_constraint(sum([lambda_x[i]*bkpts[i] for i in range(n)])==x)
+    p.add_constraint(sum([lambda_y[i]*bkpts[i] for i in range(n)])==y)
+    p.add_constraint(sum([lambda_z[i]*bkpts2[i] for i in range(2*n-1)])==z)
+    p.add_constraint(x+y==z)
+    p.add_constraint(sum([lambda_x[i]*values[i] for i in range(n)])==vx)
+    p.add_constraint(sum([lambda_y[i]*values[i] for i in range(n)])==vy)
+    p.add_constraint(sum([lambda_z[i]*values2[i] for i in range(2*n-1)])==vz)
+    p.add_constraint(sum([lambda_x[i] for i in range(n)])==1)
+    p.add_constraint(sum([lambda_y[i] for i in range(n)])==1)
+    p.add_constraint(sum([lambda_z[i] for i in range(2*n-1)])==1)
+    p.add_constraint(sum([b_x[i] for i in range(1,n)])==1)
+    p.add_constraint(sum([b_y[i] for i in range(1,n)])==1)
+    p.add_constraint(sum([b_z[i] for i in range(1,2*n-1)])==1)
+    # if b_x[i]=0, the constraint is redundant. if b_x[i]=1, x is in the interval [bkpts[i-1],bkpts[i]], and the constraint forces lambda_x[i-1]+lambda_x[i]=1.
+    for i in range(1,n):
+        p.add_constraint(lambda_x[i-1]+lambda_x[i]>=b_x[i])
+        p.add_constraint(lambda_y[i-1]+lambda_y[i]>=b_y[i])
+    for i in range(1,2*n-1):
+        p.add_constraint(lambda_z[i-1]+lambda_z[i]>=b_z[i])
+    return p
 
 def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,perturbation_epsilon_list):
     with open('performance.csv', mode='w') as file:
@@ -46,7 +86,7 @@ def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,pe
                     is_sub,n_i_a,t_i_a=measure_T_is_subadditive(fn,bound="affine",number=1,repeat=1)
                     performance_table.writerow([name,None,None,len(fn.end_points()),number_of_slopes(fn),v,add_v,float(add_v/v),m,is_sub,n_m_c,n_m_a,n_m_m, float(n_m_c/v),float(n_m_a/v),float(n_m_m/v),n_i_c,n_i_a,n_i_m,float(n_i_c/v),float(n_i_a/v),float(n_i_m/v),t_m_c,t_m_a,t_m_m,t_i_c,t_i_a,t_i_m,sage_timeit('subadditivity_test(fn,stop_if_fail=True)',globals(),number=1,repeat=1,seconds=True)])
 
-def measure_T_min(fn,max_number_of_bkpts,search_method,solver='cplex',**kwds):
+def measure_T_min(fn,max_number_of_bkpts,search_method,solver='Coin',**kwds):
     global f
     f=fn
     t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
@@ -59,7 +99,7 @@ def measure_T_min(fn,max_number_of_bkpts,search_method,solver='cplex',**kwds):
     t1=sage_timeit('proc()',globals(),seconds=True,**kwds)
     return [T.min,T.number_of_nodes(),t1-t2]
 
-def measure_T_is_subadditive(fn,max_number_of_bkpts,search_method,solver='cplex',**kwds):
+def measure_T_is_subadditive(fn,max_number_of_bkpts,search_method,solver='Coin',**kwds):
     global f
     f=fn
     t2=sage_timeit('T=SubadditivityTestTree(f)',globals(),seconds=True)
