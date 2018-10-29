@@ -17,7 +17,10 @@ default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
 default_perturbation_epsilon_list=[i/100 for i in range(3)]
 default_max_number_of_bkpts=[0,10,20,40,100,400,1000,10000,100000]
 
-def generate_mip_of_delta_pi_min(fn,solver='Coin'):
+def generate_mip_of_delta_pi_min_cc(fn,solver='Coin'):
+    """
+    Generate the Convex Combination mip formulation of computing the minimum of delta pi.
+    """
     bkpts=fn.end_points()
     values=fn.values_at_end_points()
     n=len(bkpts)
@@ -57,6 +60,114 @@ def generate_mip_of_delta_pi_min(fn,solver='Coin'):
     for i in range(1,2*n-1):
         p.add_constraint(lambda_z[i-1]+lambda_z[i]>=b_z[i])
     return p
+
+def generate_mip_of_delta_pi_min_mc(fn,solver='Coin'):
+    """
+    Generate the Multiple Choice mip formulation of computing the minimum of delta pi.
+    """
+    bkpts=fn.end_points()
+    values=fn.values_at_end_points()
+    n=len(bkpts)
+    bkpts2=bkpts+[1+bkpts[i] for i in range(1,n)]
+    values2=values+[values[i] for i in range(1,n)]
+    p = MixedIntegerLinearProgram(maximization=False, solver=solver)
+    xyz = p.new_variable()
+    x,y,z = xyz['x'],xyz['y'],xyz['z']
+    vxyz = p.new_variable()
+    vx,vy,vz = vxyz['vx'],vxyz['vy'],vxyz['vz']
+    lambda_x = p.new_variable(nonnegative=True)
+    lambda_y = p.new_variable(nonnegative=True)
+    lambda_z = p.new_variable(nonnegative=True)
+    b_x=p.new_variable(binary=True)
+    b_y=p.new_variable(binary=True)
+    b_z=p.new_variable(binary=True)
+    gamma_x = p.new_variable(nonnegative=True)
+    gamma_y = p.new_variable(nonnegative=True)
+    gamma_z = p.new_variable(nonnegative=True)
+
+    p.set_objective(vx+vy-vz)
+
+    p.add_constraint(sum([lambda_x[i]*bkpts[i] for i in range(n)])==x)
+    p.add_constraint(sum([lambda_y[i]*bkpts[i] for i in range(n)])==y)
+    p.add_constraint(sum([lambda_z[i]*bkpts2[i] for i in range(2*n-1)])==z)
+    p.add_constraint(x+y==z)
+    p.add_constraint(sum([lambda_x[i]*values[i] for i in range(n)])==vx)
+    p.add_constraint(sum([lambda_y[i]*values[i] for i in range(n)])==vy)
+    p.add_constraint(sum([lambda_z[i]*values2[i] for i in range(2*n-1)])==vz)
+    p.add_constraint(sum([lambda_x[i] for i in range(n)])==1)
+    p.add_constraint(sum([lambda_y[i] for i in range(n)])==1)
+    p.add_constraint(sum([lambda_z[i] for i in range(2*n-1)])==1)
+    p.add_constraint(sum([b_x[i] for i in range(1,n)])==1)
+    p.add_constraint(sum([b_y[i] for i in range(1,n)])==1)
+    p.add_constraint(sum([b_z[i] for i in range(1,2*n-1)])==1)
+    # if b_x[i]=1, x is in the interval [bkpts[i-1],bkpts[i]].
+    for i in range(n):
+        p.add_constraint(lambda_x[i]==gamma_x[2*i+1]+gamma_x[2*i])
+        p.add_constraint(lambda_y[i]==gamma_y[2*i+1]+gamma_y[2*i])
+    for i in range(2*n-1):
+        p.add_constraint(lambda_z[i]==gamma_z[2*i+1]+gamma_z[2*i])
+
+    for i in range(1,n):
+        p.add_constraint(b_x[i]==gamma_x[2*i-1]+gamma_x[2*i])
+        p.add_constraint(b_y[i]==gamma_y[2*i-1]+gamma_y[2*i])
+    for i in range(1,2*n-1):
+        p.add_constraint(b_z[i]==gamma_z[2*i-1]+gamma_z[2*i])
+
+    p.add_constraint(gamma_x[0]==gamma_x[2*n-1]==gamma_y[0]==gamma_y[2*n-1]==gamma_z[0]==gamma_z[4*n-3]==0)
+    return p
+
+def generate_mip_of_delta_pi_min_dlog(fn,solver='Coin'):
+    """
+    Generate the Disaggregated Logarithmic mip formulation of computing the minimum of delta pi.
+    """
+    bkpts=fn.end_points()
+    values=fn.values_at_end_points()
+    n=len(bkpts)
+    m=ceil(log(n-1,2))
+    bkpts2=bkpts+[1+bkpts[i] for i in range(1,n)]
+    values2=values+[values[i] for i in range(1,n)]
+    p = MixedIntegerLinearProgram(maximization=False, solver=solver)
+    xyz = p.new_variable()
+    x,y,z = xyz['x'],xyz['y'],xyz['z']
+    vxyz = p.new_variable()
+    vx,vy,vz = vxyz['vx'],vxyz['vy'],vxyz['vz']
+    lambda_x = p.new_variable(nonnegative=True)
+    lambda_y = p.new_variable(nonnegative=True)
+    lambda_z = p.new_variable(nonnegative=True)
+    s_x=p.new_variable(binary=True)
+    s_y=p.new_variable(binary=True)
+    s_z=p.new_variable(binary=True)
+    gamma_x = p.new_variable(nonnegative=True)
+    gamma_y = p.new_variable(nonnegative=True)
+    gamma_z = p.new_variable(nonnegative=True)
+
+    p.set_objective(vx+vy-vz)
+
+    p.add_constraint(sum([lambda_x[i]*bkpts[i] for i in range(n)])==x)
+    p.add_constraint(sum([lambda_y[i]*bkpts[i] for i in range(n)])==y)
+    p.add_constraint(sum([lambda_z[i]*bkpts2[i] for i in range(2*n-1)])==z)
+    p.add_constraint(x+y==z)
+    p.add_constraint(sum([lambda_x[i]*values[i] for i in range(n)])==vx)
+    p.add_constraint(sum([lambda_y[i]*values[i] for i in range(n)])==vy)
+    p.add_constraint(sum([lambda_z[i]*values2[i] for i in range(2*n-1)])==vz)
+    p.add_constraint(sum([lambda_x[i] for i in range(n)])==1)
+    p.add_constraint(sum([lambda_y[i] for i in range(n)])==1)
+    p.add_constraint(sum([lambda_z[i] for i in range(2*n-1)])==1)
+
+    for i in range(n):
+        p.add_constraint(lambda_x[i]==gamma_x[2*i+1]+gamma_x[2*i])
+        p.add_constraint(lambda_y[i]==gamma_y[2*i+1]+gamma_y[2*i])
+    for i in range(2*n-1):
+        p.add_constraint(lambda_z[i]==gamma_z[2*i+1]+gamma_z[2*i])
+    p.add_constraint(gamma_x[0]==gamma_x[2*n-1]==gamma_y[0]==gamma_y[2*n-1]==gamma_z[0]==gamma_z[4*n-3]==0)
+
+    for k in range(m):
+        p.add_constraint(sum([(gamma_x[2*i-1]+gamma_x[2*i])*int(format(i-1,'0%sb' %m)[k])  for i in range(1,n)])==s_x[k])
+        p.add_constraint(sum([(gamma_y[2*i-1]+gamma_y[2*i])*int(format(i-1,'0%sb' %m)[k])  for i in range(1,n)])==s_y[k])
+    for k in range(m+1):
+        p.add_constraint(sum([(gamma_z[2*i-1]+gamma_z[2*i])*int(format(i-1,'0%sb' %(m+1))[k])  for i in range(1,2*n-1)])==s_z[k])
+    return p
+
 
 def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,perturbation_epsilon_list):
     with open('performance.csv', mode='w') as file:
