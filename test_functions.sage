@@ -5,6 +5,7 @@ if '' not in sys.path:
 
 from igp import *
 
+import pulp
 import random
 import csv
 import time
@@ -16,6 +17,62 @@ default_function_name_list=['gj_forward_3_slope','drlm_backward_3_slope','chen_4
 default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
 default_perturbation_epsilon_list=[i/100 for i in range(3)]
 default_max_number_of_bkpts=[0,10,20,40,100,400,1000,10000,100000]
+
+def generate_mip_of_delta_pi_min_pulp_dlog(fn):
+    """
+    Generate the Disaggregated Logarithmic mip formulation of computing the minimum of delta pi. Using pulp with COIN_CMD.
+    """
+    bkpts=fn.end_points()
+    values=fn.values_at_end_points()
+    n=len(bkpts)
+    m=ceil(log(n-1,2))
+    bkpts2=bkpts+[1+bkpts[i] for i in range(1,n)]
+    values2=values+[values[i] for i in range(1,n)]
+
+    prob=pulp.LpProblem("Deltamin",pulp.LpMinimize)
+
+    xyz=pulp.LpVariable.matrix("xyz",range(3))
+    vxyz=pulp.LpVariable.matrix("vxyz",range(3))
+    lambda_x=pulp.LpVariable.matrix("lambda_x",range(n),0)
+    lambda_y=pulp.LpVariable.matrix("lambda_y",range(n),0)
+    lambda_z=pulp.LpVariable.matrix("lambda_z",range(2*n-1),0)
+    gamma_x=pulp.LpVariable.matrix("gamma_x",range(2*n),0)
+    gamma_y=pulp.LpVariable.matrix("gamma_y",range(2*n),0)
+    gamma_z=pulp.LpVariable.matrix("gamma_z",range(4*n-2),0)
+    s_x=pulp.LpVariable.matrix("s_x",range(m), 0, 1, pulp.LpInteger)
+    s_y=pulp.LpVariable.matrix("s_y",range(m), 0, 1, pulp.LpInteger)
+    s_z=pulp.LpVariable.matrix("s_z",range(m+1), 0, 1, pulp.LpInteger)
+
+    prob+=vxyz[0]+vxyz[1]-vxyz[2]
+
+    prob+=pulp.lpSum([lambda_x[i] for i in range(n)])==1
+    prob+=pulp.lpSum([lambda_y[i] for i in range(n)])==1
+    prob+=pulp.lpSum([lambda_z[i] for i in range(2*n-1)])==1
+    prob+=pulp.lpSum([lambda_x[i]*bkpts[i] for i in range(n)])==xyz[0]
+    prob+=pulp.lpSum([lambda_y[i]*bkpts[i] for i in range(n)])==xyz[1]
+    prob+=pulp.lpSum([lambda_z[i]*bkpts2[i] for i in range(2*n-1)])==xyz[2]
+    prob+=pulp.lpSum([lambda_x[i]*values[i] for i in range(n)])==vxyz[0]
+    prob+=pulp.lpSum([lambda_y[i]*values[i] for i in range(n)])==vxyz[1]
+    prob+=pulp.lpSum([lambda_z[i]*values2[i] for i in range(2*n-1)])==vxyz[2]
+    prob+=xyz[0]+xyz[1]==xyz[2]
+    for i in range(n):
+        prob+=lambda_x[i]==gamma_x[2*i+1]+gamma_x[2*i]
+        prob+=lambda_y[i]==gamma_y[2*i+1]+gamma_y[2*i]
+    for i in range(2*n-1):
+        prob+=lambda_z[i]==gamma_z[2*i+1]+gamma_z[2*i]
+    prob+=gamma_x[0]==0
+    prob+=gamma_x[2*n-1]==0
+    prob+=gamma_y[0]==0
+    prob+=gamma_y[2*n-1]==0
+    prob+=gamma_z[0]==0
+    prob+=gamma_z[4*n-3]==0
+    for k in range(m):
+        prob+=pulp.lpSum([(gamma_x[2*i-1]+gamma_x[2*i])*int(format(i-1,'0%sb' %m)[k])  for i in range(1,n)])==s_x[k]
+        prob+=pulp.lpSum([(gamma_y[2*i-1]+gamma_y[2*i])*int(format(i-1,'0%sb' %m)[k])  for i in range(1,n)])==s_y[k]
+    for k in range(m+1):
+        prob+=pulp.lpSum([(gamma_z[2*i-1]+gamma_z[2*i])*int(format(i-1,'0%sb' %(m+1))[k])  for i in range(1,2*n-1)])==s_z[k]
+
+    return prob
 
 def generate_mip_of_delta_pi_min_cc(fn,solver='Coin'):
     """
