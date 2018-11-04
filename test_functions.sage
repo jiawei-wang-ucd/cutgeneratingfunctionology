@@ -5,7 +5,7 @@ if '' not in sys.path:
 
 from igp import *
 
-import pulp
+#import pulp
 import random
 import csv
 import time
