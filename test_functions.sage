@@ -18,6 +18,7 @@ default_two_slope_fill_in_epsilon_list=[1/(i*10) for i in range(1,11)]
 default_perturbation_epsilon_list=[i/100 for i in range(3)]
 default_max_number_of_bkpts=[0,10,20,40,100,400,1000,10000,100000]
 
+
 def generate_mip_of_delta_pi_min_pulp_dlog(fn):
     """
     Generate the Disaggregated Logarithmic mip formulation of computing the minimum of delta pi. Using pulp with COIN_CMD.
@@ -225,6 +226,73 @@ def generate_mip_of_delta_pi_min_dlog(fn,solver='Coin'):
         p.add_constraint(sum([(gamma_z[2*i-1]+gamma_z[2*i])*int(format(i-1,'0%sb' %(m+1))[k])  for i in range(1,2*n-1)])==s_z[k])
     return p
 
+def generate_test_function_library(function_name_list,two_slope_fill_in_epsilon_list,filename):
+    """
+    Store the breakpoints and values of (complicated) functions into the file filename.csv
+    """
+    def generating_time(fn,epsilon):
+        global new_fn
+        new_fn=symmetric_2_slope_fill_in(fn,epsilon)
+        return new_fn
+    with open(filename+'.csv',mode='w') as file:
+        function_table = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        function_table.writerow(['base_function','two_slope_fill_in_epsilon','breakpoints','values','generating time (s)'])
+        for name in function_name_list:
+            global base_fn
+            global new_name
+            new_name=name
+            base_fn=eval(name)()
+            function_table.writerow([name,None,base_fn.end_points(),base_fn.values_at_end_points(),sage_timeit('base_fn=eval(new_name)()',globals(),number=2,repeat=2,seconds=True)])
+            for two_slope_fill_in_epsilon in two_slope_fill_in_epsilon_list:
+                global epsilon
+                global proc
+                epsilon=two_slope_fill_in_epsilon
+                proc=generating_time
+                t=sage_timeit('new_fn=proc(base_fn, epsilon)',globals(),number=1,repeat=1,seconds=True)
+                function_table.writerow([name,epsilon,new_fn.end_points(),new_fn.values_at_end_points(),t])
+    file.close()
+
+def convert_stringlist_to_list(list):
+    """
+    Convert the string of a list to the actual list.
+    """
+    return [QQ(l) for l in list[1:-1].split(",")]
+
+def write_mip_solving_performance(readfile_name,writefile_name,perturbation_epsilon_list,solver='Coin'):
+    """
+    Solve the dlog mip formulation of the function stored in readfile_name, and write the performance to writefile_name.
+    """
+    with open(writefile_name+'_'+solver+'.csv',mode='w') as file:
+        performance_table = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        performance_table.writerow(['base_function','two_slope_fill_in_epsilon','perturbation_epsilon','# bkpts','generating mip time (s)','solving time (s)'])
+        with open(readfile_name+'.csv',mode='r') as readfile:
+            function_table = csv.reader(readfile,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            line_count=0
+            for row in function_table:
+                if line_count==0:
+                    line_count=1
+                    continue
+                else:
+                    name,two_epsilon,bkpts,values,t=row
+                    actual_bkpts=convert_stringlist_to_list(bkpts)
+                    actual_values=convert_stringlist_to_list(values)
+                    fn=piecewise_function_from_breakpoints_and_values(actual_bkpts,actual_values)
+                    for pert_epsilon in perturbation_epsilon_list:
+                        global new_fn
+                        global s
+                        s=solver
+                        new_fn=function_random_perturbation(fn,pert_epsilon)
+                        def generate_mip(f,s):
+                            global mip
+                            mip=generate_mip_of_delta_pi_min_dlog(f,solver=s)
+                            return mip
+                        global proc1
+                        proc1=generate_mip
+                        gen_time=sage_timeit('proc1(new_fn,s)',globals(),number=1,repeat=1,seconds=True)
+                        sol_time=sage_timeit('mip.solve()',globals(),number=1,repeat=1,seconds=True)
+                        performance_table.writerow([name,two_epsilon,pert_epsilon,len(actual_bkpts),gen_time,sol_time])
+        readfile.close()
+    file.close()
 
 def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,perturbation_epsilon_list):
     with open('performance.csv', mode='w') as file:
@@ -253,6 +321,7 @@ def write_performance_table(function_name_list,two_slope_fill_in_epsilon_list,pe
                     is_sub,n_i_c,t_i_c=measure_T_is_subadditive(fn,bound="constant",number=1,repeat=1)
                     is_sub,n_i_a,t_i_a=measure_T_is_subadditive(fn,bound="affine",number=1,repeat=1)
                     performance_table.writerow([name,None,None,len(fn.end_points()),number_of_slopes(fn),v,add_v,float(add_v/v),m,is_sub,n_m_c,n_m_a,n_m_m, float(n_m_c/v),float(n_m_a/v),float(n_m_m/v),n_i_c,n_i_a,n_i_m,float(n_i_c/v),float(n_i_a/v),float(n_i_m/v),t_m_c,t_m_a,t_m_m,t_i_c,t_i_a,t_i_m,sage_timeit('subadditivity_test(fn,stop_if_fail=True)',globals(),number=1,repeat=1,seconds=True)])
+    file.close()
 
 def measure_T_min(fn,max_number_of_bkpts,search_method,solver='Coin',**kwds):
     global f
