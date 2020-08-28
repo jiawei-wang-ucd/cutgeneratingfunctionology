@@ -1,5 +1,5 @@
-import igp
-from igp import *
+import cutgeneratingfunctionology.igp as igp
+from cutgeneratingfunctionology.igp import *
 
 destdir = "survey_graphics/survey_graphics/"
 
@@ -7,7 +7,7 @@ emitted_names = set()
 
 def emit_tex_sage_command(name):
     if name not in emitted_names:
-        print >> sage_commands, '\\pgfkeyssetvalue{/sagefunc/' + name + '}{\\href{\\githubsearchurl?q=\\%22def+' + name.replace('\\', '\\\\') + '(\\%22}{\\sage{' + name.replace('_', '\\underscore{}') + '}}}%)' 
+        sage_commands.write(r'\pgfkeyssetvalue{/sagefunc/' + name + r'}{\href{\githubsearchurl?q=\%22def+' + name.replace('\\', r'\\') + '(\\%22}{\\sage{' + name.replace(r'_', r'\underscore{}') + '}}}%)' + '\n')
         emitted_names.add(name)
 
 compendium_figsize = 2.6
@@ -31,21 +31,7 @@ def compendium_ticks_keywords(function, y_ticks_for_breakpoints=False):
             #'fig_tight': False
     }
 
-def survey_ticks_keywords(function, y_ticks_for_breakpoints=False):
-    if y_ticks_for_breakpoints:
-        return {'ticks':[[0,find_f(function),1], [0,find_f(function), 1]], 
-                'tick_formatter': [['$0$', '$f$', '$1$'], ['$0$', '$f$', '$1$']],
-                'gridlines': True,
-                #'thickness': 3, 
-                #'frame': True, 
-                #'axes': False, 
-                #'fig_tight': False
-                }
-    else:
-        return {'ticks':[[0,find_f(function),1], [0,1]], 
-                'tick_formatter': [['$0$', '$f$', '$1$'], ['$0$', '$1$']],
-                'gridlines': True,
-            }
+survey_ticks_keywords = only_f_ticks_keywords
 
 def c7_ticks_keywords(function, y_ticks_for_breakpoints=False):
     xticks = [i/7 for i in range(7+1)]
@@ -58,36 +44,6 @@ def c37_ticks_keywords(function, y_ticks_for_breakpoints=False):
     xtick_formatter = [ "$%s$" % latex(x) for x in xticks ]
     return {'ticks': [xticks, [1]],
             'tick_formatter': [xtick_formatter, ['$1$']]}
-
-def latex_formatter_or_empty(x, labels_list = [0, 1]):
-    if x in labels_list:
-        return "$%s$" % latex(x)
-    else:
-        return ""
-
-def latex_formatter_or_f_or_empty(x, f, labels_list = [0, 1]):
-    if x == f:
-        return "$f$"
-    elif x in labels_list:
-        return "$%s$" % latex(x)
-    else:
-        return ""
-
-def no_labels_ticks_keywords(function, y_ticks_for_breakpoints=False):
-    xticks = function.end_points()
-    xtick_formatter = [ latex_formatter_or_f_or_empty(x, find_f(function)) for x in xticks ]
-    #xtick_formatter = 'latex'  # would not show rationals as fractions
-    ytick_formatter = None
-    if y_ticks_for_breakpoints:
-        yticks = xticks
-        ytick_formatter = xtick_formatter
-    else:
-        #yticks = 1/5
-        yticks = uniq([ y for limits in function.limits_at_end_points() for y in limits if y is not None ])
-        ytick_formatter = [ latex_formatter_or_empty(y) ]
-    return {'ticks': [xticks, yticks],
-            'gridlines': True,
-            'tick_formatter': [xtick_formatter, ytick_formatter]}
 
 def dark_rainbow(num):
     return ['darkblue', 'darkgreen', 'firebrick', 'darkcyan', 'darkmagenta', 'darkgrey', 'royalblue'][:num]
@@ -157,7 +113,7 @@ def plot_something(h):
     return g
 
 def procedure_graph(procedure_name, fn, g=None):
-    print "##", procedure_name
+    print("##", procedure_name)
     emit_tex_sage_command(procedure_name)
     plot_something(fn).save(destdir + "%s-from.pdf" % procedure_name, figsize=compendium_figsize)
     if g is None:
@@ -177,7 +133,7 @@ with open(destdir + "sage-commands.tex", "w") as sage_commands:
 
         # Graph
         
-        print "## graphics_for_survey_poset"
+        print("## graphics_for_survey_poset")
         load('survey_graphics/graphics_for_survey_poset.sage')
 
         # override function!
@@ -195,7 +151,7 @@ with open(destdir + "sage-commands.tex", "w") as sage_commands:
         ## Compendium tables
         for name in [ 'll_strong_fractional', 'hildebrand_2_sided_discont_1_slope_1', 'hildebrand_2_sided_discont_2_slope_1', 'hildebrand_discont_3_slope_1', 'dr_projected_sequential_merge_3_slope', 'chen_4_slope', 'gmic', 'gj_2_slope', 'gj_2_slope_repeat', 'dg_2_step_mir', 'kf_n_step_mir', 'gj_forward_3_slope', 'drlm_backward_3_slope', 'drlm_2_slope_limit', 'drlm_2_slope_limit_1_1', 'bhk_irrational', 'bccz_counterexample', 'drlm_3_slope_limit', 'dg_2_step_mir_limit', 'rlm_dpl1_extreme_3a', 'hildebrand_5_slope_22_1', 'hildebrand_5_slope_24_1', 'hildebrand_5_slope_28_1', 'kzh_7_slope_1', 'kzh_28_slope_1', 'bcdsp_arbitrary_slope', 'bcds_discontinuous_everywhere' ]:
             emit_tex_sage_command(name)
-            print "##", name
+            print("##", name)
             h = eval(name)()
             g = plot_something(h)
             g.save(destdir + "%s.pdf" % name, figsize=compendium_figsize)
@@ -236,7 +192,7 @@ with open(destdir + "sage-commands.tex", "w") as sage_commands:
                 extremality_test(h, show_plots=destdir + "%s_%s-%%s.pdf" % (name, s))
 
         # Bccz figure
-        print "## BCCZ"
+        print("## BCCZ")
         load("survey_graphics/graphics_for_survey_bccz.sage")
 
         # Plot or re-plot some 2d diagrams with a different style
@@ -244,7 +200,7 @@ with open(destdir + "sage-commands.tex", "w") as sage_commands:
         igp.ticks_keywords = survey_ticks_keywords
 
         name = 'gmic'
-        print "##", name
+        print("##", name)
         h = eval(name)(2/3)
         g = plot_2d_diagram(h)
         f = find_f(h)
@@ -257,7 +213,7 @@ with open(destdir + "sage-commands.tex", "w") as sage_commands:
         igp.ticks_keywords = no_labels_ticks_keywords
         
         for name in [ 'bhk_irrational', 'gj_forward_3_slope', 'not_minimal_2', 'not_extreme_1' ]:
-            print "##", name
+            print("##", name)
             emit_tex_sage_command(name)
             h = eval(name)()
             plot_2d_diagram(h, True).save(destdir + "%s-2d_diagram.pdf" % name, figsize=6) # figsize??
@@ -265,7 +221,7 @@ with open(destdir + "sage-commands.tex", "w") as sage_commands:
         igp.ticks_keywords = c7_ticks_keywords
 
         for name in [ 'drlm_not_extreme_1' ]:
-            print "##", name
+            print("##", name)
             emit_tex_sage_command(name)
             h = eval(name)()
             extremality_test(h, show_plots=destdir + "%s-%%s.pdf" % name)
